@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+    --color-bg: #121212;
+    --breakpoint-full: 1600px;
+    --breakpoint-compact: 1000px;
+}
+
+body {
+    background-color: #121212 !important;
+    color: white;
+    outline: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+}
+
+button {
+    cursor: pointer;
+}
