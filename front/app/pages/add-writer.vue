@@ -23,6 +23,11 @@
 
 <script lang="ts" setup>
 import axios from 'axios';
+import general from '~/middleware/general';
+
+definePageMeta({
+  middleware: general
+})
 
 const username = ref();
 const password = ref();

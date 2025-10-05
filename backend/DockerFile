@@ -1,0 +1,21 @@
+FROM maven:3.9.10-sapmachine-24 as build
+
+WORKDIR /data
+
+COPY src src
+
+COPY pom.xml pom.xml
+
+RUN --mount=type=cache,target=/root/.m2 mvn clean package spring-boot:repackage -DskipTests=true
+
+FROM amazoncorretto:24-alpine
+
+VOLUME /data
+
+ARG JAR_FILE=vueblog-0.0.1-SNAPSHOT.jar
+
+WORKDIR /application
+
+COPY --from=build /data/target/${JAR_FILE} application.jar
+
+ENTRYPOINT exec java -jar application.jar ${0} ${@}

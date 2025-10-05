@@ -14,6 +14,10 @@
 import axios from 'axios';
 import Input from '~/components/input.vue';
 
+const auth = useCookie('auth', {
+  maxAge: 300,
+})
+
 const login = ref();
 const password = ref();
 const error = ref<boolean>(false);
@@ -21,12 +25,14 @@ const error = ref<boolean>(false);
 const submitHandler = async (e: SubmitEvent) => {
   e.preventDefault();
   try {
-    const res = await axios.post('http://localhost:8080/api/v1/auth/login', {
+    const res = await axios.post('/auth/login', {
       username: login.value,
       password: password.value,
     });
-    if (res.status !== 200) throw new Error();
+    if (res.status !== 204) throw new Error();
+    auth.value = "true";
     error.value = false;
+    navigateTo('/write')
   } catch {
     error.value = true;
   }

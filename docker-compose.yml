@@ -1,0 +1,99 @@
+services:
+  db:
+    container_name: ${POSTGRES_HOST:-db}
+    image: postgres:16.3-alpine
+    restart: ${POSTGRES_RESTART:-always}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "${EXTERNAL_DB_PORT:-5432}"
+    command: postgres -p ${EXTERNAL_DB_PORT:-5432}
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB:-admin}
+      POSTGRES_RESTART: ${POSTGRES_RESTART:-always}
+      EXTERNAL_DB_PORT: ${EXTERNAL_DB_PORT:-6969}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-admin}" ]
+      interval: ${HEALTH_CHECK_INTERVAL:-30}s
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10}s
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40}s
+    # networks:
+    #   - service
+  service:
+    container_name: ${CONTAINER_NAME:-service}
+    build:
+      context: ./backend
+      dockerfile: DockerFile
+    ports:
+      - "${APP_PORT:-8080}"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: ${RESTART_POLICY:-always}
+    environment:
+      APP_PORT: ${APP_PORT:-8080}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${EXTERNAL_DB_PORT:-5432}/${POSTGRES_DB:-admin}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT:-6379}
+      SPRING_LOG_DIRECTORY: ${SPRING_LOG_DIRECTORY:-./log}
+      SPRING_LOGGING_LEVEL_ROOT: ${SPRING_LOGGING_LEVEL_ROOT:-info}
+    volumes:
+      - client_data:/data
+    # networks:
+    #   - service
+  redis:
+    container_name: redis
+    image: redis:5
+    ports:
+      - "${REDIS_PORT:-6379}"
+    restart: ${RESTART_POLICY:-always}
+    healthcheck:
+      test: ["CMD", "redis", "ping"]
+      interval: ${HEALTH_CHECK_INTERVAL:-30}s
+      timeout: ${HEALTH_CHECK_TIMEOUT:-10}s
+      retries: ${HEALTH_CHECK_RETRIES:-3}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-40}s
+    volumes:
+      - redis_data:/data
+    # networks:
+    #   - service
+  frontend:
+    container_name: frontend
+    build:
+      context: ./front
+      dockerfile: DockerFile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - service
+    # networks:
+    #   - service
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: always
+    depends_on:
+      - service
+      - frontend
+    # networks:
+    #   - service
+
+
+volumes:
+  pg_data:
+  client_data:
+  redis_data:
+
+# networks:
+#   service:
+#     driver: bridge
